@@ -1,1 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ultimate Tools Hub — Single File UltraPro</title>
 
+  <!-- External libs (CDN) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    // Set workerSrc for pdf.js (cdnjs)
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+  <!-- Tesseract (OCR) - optional, heavy for large files -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+
+  <style>
+    :root{
+      --glass: rgba(255,255,255,0.06);
+      --glass-strong: rgba(255,255,255,0.12);
+      --accent1: #6b5ce7;
+      --accent2: #8f94fb;
+      --text: #e9eefc;
+      --muted: rgba(233,238,252,0.7);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(135deg, #061826 0%, #0b2236 40%, #0e1b3a 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding-bottom:80px;
+    }
+
+    /* Header / Hero */
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;padding:18px 28px;
+      backdrop-filter: blur(6px);
+      background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      position:sticky;top:0;z-index:50;
+    }
+    .logo{display:flex;gap:12px;align-items:center}
+    .logo .mark{
+      width:44px;height:44px;border-radius:10px;
+      background:linear-gradient(135deg,var(--accent1),var(--accent2));
+      display:flex;align-items:center;justify-content:center;font-weight:700;
+      box-shadow: 0 6px 20px rgba(80,60,200,0.18);
+    }
+    .logo h1{font-size:16px;margin:0}
+    .nav-actions{display:flex;gap:10px;align-items:center}
+
+    .container{max-width:1150px;margin:26px auto;padding:0 18px}
+
+    .hero{
+      display:grid;grid-template-columns:1fr 420px;gap:24px;align-items:center;
+      margin-bottom:28px;
+    }
+    .hero-card{
+      padding:28px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6); border:1px solid rgba(255,255,255,0.03);
+      backdrop-filter: blur(8px);
+    }
+    .hero h2{font-size:28px;margin:0 0 8px}
+    .hero p{color:var(--muted);margin:0 0 16px}
+    .drag-area{
+      border:2px dashed rgba(255,255,255,0.06);
+      padding:20px;border-radius:12px;text-align:center;cursor:pointer;
+      transition:all .18s ease;
+    }
+    .drag-area.dragover{transform:scale(1.01);border-color:rgba(255,255,255,0.12)}
+    .cta{display:flex;gap:10px;margin-top:12px}
+    .btn{
+      background: linear-gradient(90deg,var(--accent1),var(--accent2));
+      border:none;color:white;padding:12px 16px;border-radius:10px;cursor:pointer;font-weight:600;
+      box-shadow: 0 8px 24px rgba(76,65,200,0.18);
+    }
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
+
+    /* Tools grid */
+    .tools-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;
+      margin-top:18px;
+    }
+    .card{
+      padding:16px;border-radius:14px;background:var(--glass);
+      border:1px solid rgba(255,255,255,0.03);backdrop-filter: blur(6px);
+      transition:transform .18s ease, box-shadow .18s ease;
+    }
+    .card:hover{transform:translateY(-6px);box-shadow:0 18px 50px rgba(5,8,20,0.6)}
+    .card h3{margin:0 0 8px;font-size:16px}
+    .muted{color:var(--muted);font-size:13px;margin-top:6px}
+    .controls{display:flex;flex-direction:column;gap:8px}
+
+    input[type="file"]{color:transparent}
+    input,select,textarea{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:var(--text)}
+
+    canvas,img{display:block;border-radius:10px;max-width:100%;height:auto;margin-top:10px;border:1px solid rgba(255,255,255,0.03)}
+
+    .small{font-size:13px;padding:8px 10px;border-radius:8px}
+    .range{width:100%}
+
+    footer{
+      position:fixed;left:0;right:0;bottom:0;padding:10px 18px;background:linear-gradient(0deg,rgba(0,0,0,0.3),transparent);
+      display:flex;justify-content:center;gap:8px;color:var(--muted);
+      font-size:13px;
+    }
+
+    /* Simple responsive */
+    @media (max-width:980px){
+      .hero{grid-template-columns:1fr;gap:12px}
+      .topbar{padding:12px}
+      .logo h1{font-size:14px}
+    }
+
+    /* Dark mode class (toggled) */
+    .dark-root{
+      --accent1:#ff5c7c;--accent2:#ff8a5b;
+      background: linear-gradient(135deg, #0b1220 0%, #071022 40%, #041022 100%);
+      color:#f6f8fb;
+    }
+
+    /* little status chip */
+    .status{display:inline-block;padding:6px 10px;border-radius:999px;font-size:13px;background:rgba(0,0,0,0.2);color:var(--muted)}
+
+    /* before/after slider */
+    .ba-wrap{position:relative;overflow:hidden;border-radius:10px}
+    .ba-wrap img, .ba-wrap canvas{position:absolute;left:0;top:0;width:100%;height:auto;display:block}
+    .ba-handle{position:relative}
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="logo">
+      <div class="mark">U</div>
+      <div>
+        <h1>Ultimate Tools Hub</h1>
+        <div style="font-size:12px;color:var(--muted)">One Platform. Infinite Tools.</div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <div class="status" id="statusTop">Ready</div>
+      <button class="btn ghost small" id="toggleTheme">🌙 Dark</button>
+    </div>
+  </div>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-card">
+        <h2>Fix, Convert, Compress & Create — Instantly</h2>
+        <p>Over a dozen browser-first tools included. No server needed for the majority of features. Drag & drop files below to start.</p>
+
+        <div id="dragArea" class="drag-area" title="Drop image or PDF here">
+          <div style="font-weight:700;font-size:15px">Drag & Drop or Click to Upload</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:6px">Supports images & PDFs (local).</div>
+          <input id="heroFile" type="file" accept="image/*,application/pdf" style="opacity:0;position:absolute;inset:0;cursor:pointer" />
+        </div>
+
+        <div class="cta">
+          <button class="btn" id="startNow">Start Now</button>
+          <button class="ghost btn" id="seeAll">See Tools</button>
+        </div>
+      </div>
+
+      <aside class="hero-card" style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:13px;color:var(--muted)">Processed</div>
+            <div style="font-weight:800;font-size:20px">1M+ files</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;color:var(--muted)">Active Users</div>
+            <div style="font-weight:800;font-size:20px">50k+</div>
+          </div>
+        </div>
+
+        <div style="font-size:13px;color:var(--muted)">
+          Quick-access: Compress, Convert, Crop, Resize, PDF → Text
+        </div>
+
+        <div style="display:flex;gap:10px">
+          <button class="btn small" id="quickCompress">Compress Image</button>
+          <button class="ghost small" id="quickConvert">Image → PNG</button>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Tools grid -->
+    <section id="tools" class="tools-grid">
+      <!-- Image Converter -->
+      <div class="card">
+        <h3>JPG ↔ PNG Converter</h3>
+        <div class="muted">Convert images without losing quality (browser-only).</div>
+        <div class="controls">
+          <input type="file" id="convInput" accept="image/*"/>
+          <select id="convFormat" class="small">
+            <option value="image/png">Convert to PNG</option>
+            <option value="image/jpeg">Convert to JPG (jpeg)</option>
+            <option value="image/webp">Convert to WebP</option>
+          </select>
+          <button class="btn small" onclick="convertImage()">Convert & Download</button>
+          <canvas id="convCanvas"></canvas>
+          <a id="convDL" download="converted" style="display:none" class="small ghost">Download converted</a>
+        </div>
+      </div>
+
+      <!-- Image Compressor with Before/After -->
+      <div class="card">
+        <h3>Image Compressor — Before / After</h3>
+        <div class="muted">Reduce size with quality slider (preview + before/after).</div>
+        <div class="controls">
+          <input type="file" id="compInput" accept="image/*"/>
+          <label class="small">Quality (<span id="qVal">0.7</span>)</label>
+          <input id="qualityRange" type="range" min="0.1" max="1" step="0.05" value="0.7" class="range"/>
+          <button class="btn small" onclick="compressPreview()">Compress Preview</button>
+          <div style="position:relative;margin-top:10px">
+            <div class="ba-wrap" id="baWrap" style="height:auto;background:#0a1230">
+              <canvas id="origCanvas"></canvas>
+              <canvas id="compCanvas" style="clip-path:inset(0 50% 0 0)"></canvas>
+            </div>
+            <input id="baSlider" type="range" min="0" max="100" value="50" style="width:100%;margin-top:8px"/>
+          </div>
+          <a id="compDL" download="compressed.jpg" style="display:none" class="small ghost">Download compressed</a>
+          <div id="compStatus" class="muted" style="font-size:13px"></div>
+        </div>
+      </div>
+
+      <!-- Resize -->
+      <div class="card">
+        <h3>Image Resizer</h3>
+        <div class="muted">Set custom output width/height (pixels).</div>
+        <div class="controls">
+          <input type="file" id="resizeInput" accept="image/*"/>
+          <div style="display:flex;gap:8px">
+            <input id="resizeW" type="number" placeholder="Width (px)" />
+            <input id="resizeH" type="number" placeholder="Height (px)" />
+          </div>
+          <button class="btn small" onclick="doResize()">Resize & Download</button>
+          <canvas id="resizeCanvas"></canvas>
+          <a id="resizeDL" download="resized.jpg" style="display:none" class="small ghost">Download resized</a>
+        </div>
+      </div>
+
+      <!-- Cropper -->
+      <div class="card">
+        <h3>Image Cropper</h3>
+        <div class="muted">Drag to select crop area.</div>
+        <div class="controls">
+          <input type="file" id="cropInput" accept="image/*"/>
+          <div style="max-height:320px;overflow:hidden">
+            <img id="cropTarget" style="max-width:100%;display:none" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn small" id="cropBtn">Crop</button>
+            <button class="ghost small" id="resetCrop">Reset</button>
+          </div>
+          <canvas id="cropCanvas"></canvas>
+          <a id="cropDL" download="cropped.png" style="display:none" class="small ghost">Download cropped</a>
+        </div>
+      </div>
+
+      <!-- Black & White -->
+      <div class="card">
+        <h3>Black & White Filter</h3>
+        <div class="muted">Instant grayscale filter (non-destructive).</div>
+        <div class="controls">
+          <input type="file" id="bwInput" accept="image/*"/>
+          <button class="btn small" onclick="applyBW()">Apply B&W</button>
+          <canvas id="bwCanvas"></canvas>
+          <a id="bwDL" download="bw.jpg" style="display:none" class="small ghost">Download B&W</a>
+        </div>
+      </div>
+
+      <!-- Image -> PDF -->
+      <div class="card">
+        <h3>Image → PDF</h3>
+        <div class="muted">Create a PDF from an image (single page).</div>
+        <div class="controls">
+          <input type="file" id="imgPdfInput" accept="image/*"/>
+          <button class="btn small" onclick="imgToPdf()">Create PDF</button>
+          <a id="imgPdfDL" download="out.pdf" style="display:none" class="small ghost">Download PDF</a>
+          <div id="imgPdfStatus" class="muted"></div>
+        </div>
+      </div>
+
+      <!-- PDF Text Extractor -->
+      <div class="card">
+        <h3>PDF → Text (Extractor)</h3>
+        <div class="muted">Extract readable text from PDFs (browser).</div>
+        <div class="controls">
+          <input type="file" id="pdfInput" accept="application/pdf"/>
+          <button class="btn small" onclick="extractPdfText()">Extract Text</button>
+          <div id="pdfText" style="max-height:220px;overflow:auto;background:rgba(0,0,0,0.25);padding:8px;border-radius:8px;margin-top:8px;font-size:13px"></div>
+        </div>
+      </div>
+
+      <!-- OCR -->
+      <div class="card">
+        <h3>OCR (Image / PDF pages)</h3>
+        <div class="muted">Runs Tesseract in-browser (may be slow for large files).</div>
+        <div class="controls">
+          <input type="file" id="ocrInput" accept="image/*,application/pdf"/>
+          <button class="btn small" onclick="runOCR()">Run OCR</button>
+          <div id="ocrStatus" class="muted" style="font-size:13px"></div>
+          <div id="ocrResult" style="max-height:180px;overflow:auto;background:rgba(0,0,0,0.25);padding:8px;border-radius:8px;margin-top:8px;font-size:13px"></div>
+        </div>
+      </div>
+
+      <!-- QR Code -->
+      <div class="card">
+        <h3>QR Code Generator</h3>
+        <div class="muted">URLs, text, or any string.</div>
+        <div class="controls">
+          <input id="qrText" placeholder="Enter text or URL" />
+          <button class="btn small" onclick="makeQR()">Generate</button>
+          <canvas id="qrCanvas" style="margin-top:10px"></canvas>
+          <a id="qrDL" download="qrcode.png" style="display:none" class="small ghost">Download QR</a>
+        </div>
+      </div>
+
+      <!-- Unit Converter -->
+      <div class="card">
+        <h3>Unit Converter</h3>
+        <div class="muted">cm ↔ inch, °C ↔ °F, kg ↔ lb</div>
+        <div class="controls">
+          <input id="ucInput" type="number" placeholder="Value"/>
+          <select id="ucType">
+            <option value="cm2inch">cm → inch</option>
+            <option value="inch2cm">inch → cm</option>
+            <option value="c2f">°C → °F</option>
+            <option value="f2c">°F → °C</option>
+            <option value="kg2lb">kg → lb</option>
+            <option value="lb2kg">lb → kg</option>
+          </select>
+          <button class="btn small" onclick="unitConvert()">Convert</button>
+          <div id="ucRes" class="muted"></div>
+        </div>
+      </div>
+
+      <!-- Currency -->
+      <div class="card">
+        <h3>Currency (USD → INR)</h3>
+        <div class="muted">Live rate from exchangerate.host</div>
+        <div class="controls">
+          <input id="usdVal" type="number" placeholder="USD" />
+          <button class="btn small" onclick="convCurrency()">Convert</button>
+          <div id="curRes" class="muted"></div>
+        </div>
+      </div>
+
+      <!-- Online Notepad -->
+      <div class="card">
+        <h3>Online Notepad</h3>
+        <div class="muted">Saved locally in your browser (localStorage).</div>
+        <div class="controls">
+          <textarea id="noteArea" rows="6" placeholder="Write notes here..."></textarea>
+          <div style="display:flex;gap:8px">
+            <button class="btn small" onclick="saveNote()">Save</button>
+            <button class="ghost small" onclick="loadNote()">Load</button>
+            <button class="ghost small" onclick="exportNote()">Export</button>
+            <button class="ghost small" onclick="clearNote()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer>Made with ⚡ by Ultimate Tools Hub — Single-file demo • Files are never uploaded to a server</footer>
+
+  <!-- MAIN SCRIPT -->
+  <script>
+    // Helper: select
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    // Theme toggle
+    const toggleEl = $('#toggleTheme');
+    toggleEl.addEventListener('click', ()=>{
+      document.body.classList.toggle('dark-root');
+      const isDark = document.body.classList.contains('dark-root');
+      toggleEl.textContent = isDark ? '☀️ Light' : '🌙 Dark';
+    });
+
+    // Hero drag & drop
+    const dragArea = document.getElementById('dragArea');
+    const heroFile = document.getElementById('heroFile');
+    ['dragenter','dragover','dragleave','drop'].forEach(evt=>{
+      dragArea.addEventListener(evt,e=>{
+        e.preventDefault(); e.stopPropagation();
+        if(evt==='dragover' || evt==='dragenter') dragArea.classList.add('dragover');
+        if(evt==='dragleave' || evt==='drop') dragArea.classList.remove('dragover');
+      });
+    });
+    dragArea.addEventListener('drop', e=>{
+      const f = e.dataTransfer.files[0];
+      if(f) handleHeroFile(f);
+    });
+    dragArea.addEventListener('click', ()=> heroFile.click());
+    heroFile.addEventListener('change', ()=> {
+      if(heroFile.files[0]) handleHeroFile(heroFile.files[0]);
+    });
+
+    function setStatusTop(t){
+      document.getElementById('statusTop').textContent = t;
+    }
+
+    function handleHeroFile(file){
+      setStatusTop('File ready — choose a tool');
+      // If image → open converter preview
+      if(file.type.startsWith('image/')){
+        // Switch user to converter card automatically:
+        const convInput = document.getElementById('convInput');
+        // Create DataTransfer to set file
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        convInput.files = dt.files;
+        // draw preview quickly
+        convertImage(true);
+        convInput.scrollIntoView({behavior:'smooth'});
+      } else if(file.type === 'application/pdf'){
+        const pdfInput = document.getElementById('pdfInput');
+        const dt = new DataTransfer(); dt.items.add(file); pdfInput.files = dt.files;
+        pdfInput.scrollIntoView({behavior:'smooth'});
+      }
+    }
+
+    // ---------------------------
+    // 1) Image convert / download
+    // ---------------------------
+    function convertImage(autoPreview=false){
+      const inp = document.getElementById('convInput');
+      const fmt = document.getElementById('convFormat').value || 'image/png';
+      if(!inp.files || !inp.files[0]){ alert('Choose an image first'); return; }
+      const file = inp.files[0];
+      const canvas = document.getElementById('convCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const img = new Image();
+      img.onload = ()=>{
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0);
+        // show download option
+        canvas.toBlob(blob=>{
+          const url = URL.createObjectURL(blob);
+          const a = document.getElementById('convDL');
+          a.href = url;
+          // set filename ext
+          const ext = fmt.split('/')[1].split('+')[0];
+          a.download = `converted.${ext}`;
+          a.style.display = 'inline-block';
+          if(autoPreview) a.click();
+        }, fmt, 0.92);
+      };
+      img.onerror = ()=> alert('Invalid image file');
+      const reader = new FileReader();
+      reader.onload = e => { img.src = e.target.result; }
+      reader.readAsDataURL(file);
+    }
+
+      // ---------------------------
+    // 2) Image compress (before/after)
+    // ---------------------------
+    const origCanvas = document.getElementById('origCanvas');
+    const compCanvas = document.getElementById('compCanvas');
+    const baSlider = document.getElementById('baSlider');
+
+    document.getElementById('compInput').addEventListener('change', ()=>{
+      const f = document.getElementById('compInput').files[0];
+      if(!f) return;
+      loadImageToCanvas(f, origCanvas, () => {
+        // copy original to compressed initially
+        copyCanvas(origCanvas, compCanvas);
+      });
+    });
+
+    baSlider.addEventListener('input', ()=>{
+      const percent = baSlider.value;
+      compCanvas.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+    });
+
+    document.getElementById('qualityRange').addEventListener('input', (e)=>{
+      document.getElementById('qVal').textContent = e.target.value;
+    });
+
+    function compressPreview(){
+      const q = parseFloat(document.getElementById('qualityRange').value || 0.7);
+      const stat = document.getElementById('compStatus');
+      stat.textContent = 'Compressing…';
+
+      // take origCanvas and toBlob as jpeg with quality q
+      origCanvas.toBlob(blob=>{
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = ()=>{
+          compCanvas.width = img.naturalWidth; compCanvas.height = img.naturalHeight;
+          const ctx = compCanvas.getContext('2d');
+          ctx.clearRect(0,0,compCanvas.width,compCanvas.height);
+          ctx.drawImage(img,0,0);
+          // create downloadable blob (image/jpeg)
+          compCanvas.toBlob(b=>{
+            const dl = document.getElementById('compDL');
+            dl.href = URL.createObjectURL(b);
+            dl.style.display = 'inline-block';
+            stat.textContent = 'Done — use the slider to compare';
+          }, 'image/jpeg', q);
+        };
+        img.src = url;
+      }, 'image/jpeg', q);
+    }
+
+    function copyCanvas(src, dst){
+      dst.width = src.width; dst.height = src.height;
+      const dctx = dst.getContext('2d');
+      dctx.clearRect(0,0,dst.width,dst.height);
+      dctx.drawImage(src,0,0);
+    }
+
+    // Generic load image to canvas helper
+    function loadImageToCanvas(file, canvas, cb){
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = e => {
+        img.src = e.target.result;
+      };
+      img.onload = ()=>{
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,0,0);
+        if(cb) cb();
+      };
+      reader.readAsDataURL(file);
+    }
+    // ---------------------------
+    // 3) Resize
+    // ---------------------------
+    document.getElementById('resizeInput').addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      loadImageToCanvas(f, document.getElementById('resizeCanvas'));
+    });
+
+    function doResize(){
+      const w = parseInt(document.getElementById('resizeW').value);
+      const h = parseInt(document.getElementById('resizeH').value);
+      const src = document.getElementById('resizeCanvas');
+      if(!src || !src.width){ alert('Load an image first'); return; }
+      const tmp = document.createElement('canvas');
+      tmp.width = w || Math.round(src.width * (h / src.height));
+      tmp.height = h || Math.round(src.height * (w / src.width));
+      tmp.getContext('2d').drawImage(src,0,0,tmp.width,tmp.height);
+      const dl = document.getElementById('resizeDL');
+      tmp.toBlob(b=>{
+        dl.href = URL.createObjectURL(b);
+        dl.style.display = 'inline-block';
+      }, 'image/jpeg', 0.92);
+    }
+
+    // ---------------------------
+    // 4) Cropper
+    // ---------------------------
+    let cropper = null;
+    const cropTarget = document.getElementById('cropTarget');
+    document.getElementById('cropInput').addEventListener('change', function(){
+      const f = this.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        cropTarget.src = e.target.result;
+        cropTarget.style.display = 'block';
+        // destroy existing
+        if(cropper) cropper.destroy();
+        cropper = new Cropper(cropTarget, {
+          viewMode:1, autoCropArea:0.8, responsive:true, background:false
+        });
+      };
+      reader.readAsDataURL(f);
+    });
+    document.getElementById('cropBtn').addEventListener('click', ()=>{
+      if(!cropper){ alert('Load an image to crop'); return; }
+      const canvas = cropper.getCroppedCanvas({imageSmoothingQuality:'high'});
+      const out = document.getElementById('cropCanvas');
+      out.width = canvas.width; out.height = canvas.height;
+      out.getContext('2d').drawImage(canvas,0,0);
+      out.toBlob(b=>{
+        const a = document.getElementById('cropDL');
+        a.href = URL.createObjectURL(b); a.style.display='inline-block';
+      }, 'image/png');
+    });
+    document.getElementById('resetCrop').addEventListener('click', ()=>{
+      if(cropper) cropper.reset();
+    });
+
+    // ---------------------------
+    // 5) Black & White
+    // ---------------------------
+    document.getElementById('bwInput').addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      loadImageToCanvas(f, document.getElementById('bwCanvas'));
+    });
+    function applyBW(){
+      const c = document.getElementById('bwCanvas');
+      if(!c || !c.width){ alert('Load an image first'); return; }
+      const ctx = c.getContext('2d');
+      const d = ctx.getImageData(0,0,c.width,c.height);
+      for(let i=0;i<d.data.length;i+=4){
+        const r=d.data[i], g=d.data[i+1], b=d.data[i+2];
+        const gray = 0.299*r + 0.587*g + 0.114*b;
+        d.data[i]=d.data[i+1]=d.data[i+2]=gray;
+      }
+      ctx.putImageData(d,0,0);
+      c.toBlob(b=>{
+        const a=document.getElementById('bwDL'); a.href=URL.createObjectURL(b); a.style.display='inline-block';
+      }, 'image/jpeg', 0.94);
+    }
+    // ---------------------------
+    // 6) Image -> PDF
+    // ---------------------------
+    document.getElementById('imgPdfInput').addEventListener('change',(e)=>{/* no op */});
+    async function imgToPdf(){
+      const f = document.getElementById('imgPdfInput').files[0];
+      if(!f){ alert('Choose image first'); return; }
+      document.getElementById('imgPdfStatus').textContent = 'Creating PDF…';
+      const reader = new FileReader();
+      reader.onload = async (ev)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({unit:'px',format:[img.naturalWidth, img.naturalHeight]});
+          pdf.addImage(img, 'PNG', 0, 0, img.naturalWidth, img.naturalHeight);
+          const blob = pdf.output('blob');
+          const a = document.getElementById('imgPdfDL');
+          a.href = URL.createObjectURL(blob); a.style.display='inline-block';
+          document.getElementById('imgPdfStatus').textContent = 'PDF ready';
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(f);
+    }
+
+    // ---------------------------
+    // 7) PDF Text Extractor (pdf.js)
+    // ---------------------------
+    async function extractPdfText(){
+      const f = document.getElementById('pdfInput').files[0];
+      if(!f) { alert('Choose PDF first'); return; }
+      const arrBuffer = await f.arrayBuffer();
+      const loading = pdfjsLib.getDocument({data:arrBuffer});
+      const pdf = await loading.promise;
+      const N = pdf.numPages;
+      const out = [];
+      for(let i=1;i<=N;i++){
+        const page = await pdf.getPage(i);
+        const txt = await page.getTextContent();
+        const strings = txt.items.map(it => it.str);
+        out.push(strings.join(' '));
+      }
+      document.getElementById('pdfText').textContent = out.join('\n\n--- PAGE BREAK ---\n\n');
+    }
+
+    // ---------------------------
+    // 8) OCR (Tesseract.js)
+    // ---------------------------
+    async function runOCR(){
+      const f = document.getElementById('ocrInput').files[0];
+      const status = document.getElementById('ocrStatus');
+      const resultBox = document.getElementById('ocrResult');
+      resultBox.textContent = ''; status.textContent = '';
+      if(!f){ alert('Choose image or PDF (page image)'); return; }
+      status.textContent = 'Loading OCR engine… (this may take a few seconds)';
+      // For PDF input, we won't auto-extract pages; user should upload image or PDF page as image.
+      try{
+        const worker = Tesseract.createWorker({logger: m => {
+          if(m.status) status.textContent = `${m.status} ${Math.round((m.progress||0)*100)}%`;
+        }});
+        await worker.load();
+        await worker.loadLanguage('eng');
+        await worker.initialize('eng');
+        const { data } = await worker.recognize(f);
+        resultBox.textContent = data.text;
+        await worker.terminate();
+        status.textContent = 'Done';
+      }catch(err){
+        status.textContent = 'OCR failed: ' + err.message;
+      }
+    }
+
+    // ---------------------------
+    // 9) QR Code Generator (QRious)
+    // ---------------------------
+    function makeQR(){
+      const txt = document.getElementById('qrText').value || 'https://example.com';
+      const canvas = document.getElementById('qrCanvas');
+      // QRious expects a canvas or element
+      const qr = new QRious({element: canvas, value: txt, size: 240});
+      // show download link
+      setTimeout(()=> {
+        canvas.toBlob(b => {
+          const a = document.getElementById('qrDL'); a.href = URL.createObjectURL(b); a.style.display='inline-block';
+        });
+      },200);
+    }
+
+    // ---------------------------
+    // 10) Unit converter
+    // ---------------------------
+    function unitConvert(){
+      const val = parseFloat(document.getElementById('ucInput').value);
+      const type = document.getElementById('ucType').value;
+      if(isNaN(val)) return alert('Enter a numeric value');
+      let res;
+      switch(type){
+        case 'cm2inch': res = (val / 2.54).toFixed(4) + ' in'; break;
+        case 'inch2cm': res = (val * 2.54).toFixed(4) + ' cm'; break;
+        case 'c2f': res = (val * 9/5 + 32).toFixed(2) + ' °F'; break;
+        case 'f2c': res = ((val - 32) * 5/9).toFixed(2) + ' °C'; break;
+        case 'kg2lb': res = (val * 2.20462).toFixed(4) + ' lb'; break;
+        case 'lb2kg': res = (val / 2.20462).toFixed(4) + ' kg'; break;
+        default: res = '—';
+      }
+      document.getElementById('ucRes').textContent = res;
+    }
+
+    // ---------------------------
+    // 11) Currency (USD -> INR)
+    // ---------------------------
+    async function convCurrency(){
+      const v = parseFloat(document.getElementById('usdVal').value||0);
+      if(isNaN(v)) return alert('Enter amount in USD');
+      document.getElementById('curRes').textContent = 'Fetching rate…';
+      try{
+        const resp = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR');
+        const json = await resp.json();
+        if(!json || !json.rates) throw new Error('No rates');
+        const rate = json.rates.INR;
+        const converted = (v * rate).toFixed(2);
+        document.getElementById('curRes').textContent = `${v} USD ≈ ₹ ${converted} (Rate: ${rate.toFixed(2)})`;
+      }catch(err){
+        document.getElementById('curRes').textContent = 'Rate fetch failed: ' + err.message;
+      }
+    }
+    // ---------------------------
+    // 12) Online Notepad (localStorage)
+    // ---------------------------
+    function saveNote(){
+      const text = document.getElementById('noteArea').value;
+      localStorage.setItem('ultimate_notepad', text);
+      alert('Saved locally 👍');
+    }
+    function loadNote(){
+      const t = localStorage.getItem('ultimate_notepad') || '';
+      document.getElementById('noteArea').value = t;
+      alert('Loaded 📝');
+    }
+    function exportNote(){
+      const text = document.getElementById('noteArea').value;
+      const blob = new Blob([text], {type:'text/plain'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'note.txt';
+      a.click();
+    }
+    function clearNote(){
+      if(confirm('Clear note?')){ document.getElementById('noteArea').value=''; localStorage.removeItem('ultimate_notepad'); }
+    }
+
+    // ---------------------------
+    // Small quick buttons
+    // ---------------------------
+    document.getElementById('quickCompress').addEventListener('click', ()=>{
+      document.getElementById('compInput').click();
+    });
+    document.getElementById('quickConvert').addEventListener('click', ()=>{
+      document.getElementById('convInput').click();
+    });
+
+    // Keep some UX tight: clicking See Tools scrolls down
+    document.getElementById('seeAll').addEventListener('click', ()=>{
+      document.getElementById('tools').scrollIntoView({behavior:'smooth'});
+    });
+
+    // Start now: focus hero
+    document.getElementById('startNow').addEventListener('click', ()=>{
+      document.getElementById('dragArea').scrollIntoView({behavior:'smooth'});
+    });
+
+    // Conv input preview: auto draw
+    document.getElementById('convInput').addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      loadImageToCanvas(f, document.getElementById('convCanvas'));
+    });
+
+    // Resize canvas default clearing
+    window.addEventListener('load', ()=>{
+      // blank small canvases so layout looks neat
+      [origCanvas, compCanvas].forEach(c=>{
+        if(c){
+          c.width = 600; c.height = 360;
+          c.getContext('2d').fillStyle = '#071227';
+          c.getContext('2d').fillRect(0,0,c.width,c.height);
+        }
+      });
+    });
+
+    // Small warning if user tries heavy operations on big files
+    document.addEventListener('change', (e)=>{
+      if(e.target && e.target.type === 'file' && e.target.files && e.target.files[0]){
+        const f = e.target.files[0];
+        if(f.size > 100*1024*1024){ // 100 MB
+          alert('Large file detected (>100MB). Browser-based tools may be slow or fail. Use smaller files for best experience.');
+        }
+      }
+    });
+
+    // Nice little flourish: before/after initial clip
+    setTimeout(()=> {
+      compCanvas.style.clipPath = 'inset(0 50% 0 0)';
+    }, 400);
+
+  </script>
+</body>
+</html>
